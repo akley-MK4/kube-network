@@ -94,15 +94,18 @@ sudo modprobe 8021q
 
 # The following yaml file will trigger the reconcile of nmstate-operator, which will create the vlan interface on the nodes.
 kubectl apply -f ./vlan-enp4s0-2000-test.yaml
+kubectl apply -f ./vlan-enp4s0-2001-test.yaml
 ```
 
 2. Check the normal status of the interface
 ```console
 # Check the status of the nncp
 kubectl get nncp vlan-enp4s0-2000-test
+kubectl get nncp vlan-enp4s0-2001-test
 
 # Check the status of ip link
 ip -d link show ip -d link show enp4s0.2000
+ip -d link show ip -d link show enp4s0.2001
 ```
 
 3. Check the error status of this interface
@@ -112,4 +115,5 @@ kubectl logs nmstate-handler-jflhd -n nmstate -f
 
 # Check if it has been taken over by NetworkManager
 nmcli device status |grep 'enp4s0.2000'
+nmcli device status |grep 'enp4s0.2001'
 ```

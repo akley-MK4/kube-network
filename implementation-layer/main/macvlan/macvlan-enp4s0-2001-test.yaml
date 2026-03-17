@@ -1,0 +1,17 @@
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-enp4s0-2001-test
+spec:
+  config: '{
+      "cniVersion": "0.3.1",
+      "type": "macvlan",
+      "master": "enp4s0.2001",
+      "mode": "bridge",
+      "ipam": {
+        "type": "host-local",
+        "subnet": "2.1.1.0/24",
+        "rangeStart": "2.1.1.10",
+        "rangeEnd": "2.1.1.100"
+      }
+    }'

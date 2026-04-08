@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vlan-busybox-a
+  annotations:
+    k8s.v1.cni.cncf.io/networks: vlan-enp4s0-2002-test 
+spec:
+  containers:
+  - name: nginx-container
+    image: busybox:1.36
+    command: ["sh", "-c", "while true; do sleep 30; done"]
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"

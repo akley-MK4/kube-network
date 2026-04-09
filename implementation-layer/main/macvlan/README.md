@@ -40,18 +40,15 @@ sudo cp ./macvlan /opt/cni/bin/
 kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick.yml
 ```
 
+## Flowsheet
+![network topology](network-topology.png)
+![network communication flow](network-communication-flow.png)
+
 ## Use
 1. Store a configuration as a Custom Resource
 ```console
 kubectl apply -f ./macvlan-enp4s0-2000-test.yaml
 kubectl get network-attachment-definitions
-```
-
-<!-- 2. Add routes to the opponent's subnet. 
-If two VLANs are isolated, it is necessary to add IP addresses and configure forwarding on the host machine.
-```console
-sudo ip addr add 2.1.0.1/24 dev enp4s0.2000
-sudo ip addr add 2.1.1.1/24 dev enp4s0.2001 -->
 ```
 
 2. Create two pods with net1 interface  
@@ -60,10 +57,8 @@ The IP of net1 interface in pod busybox-a is 2.1.0.10, The IP of net1 interface 
 kubectl apply -f ./busybox-pods.yaml
 ```
 
-
 4. Test the network connection of the net1 interface between two pods
 ```console
 kubectl exec -it busybox-a -- sh
 ping -I net1 2.1.0.11
 ```
-

@@ -1,0 +1,147 @@
+@startuml
+!define POD_COLOR #CCE5FF
+!define NAD_COLOR #FFE5CC
+!define NETWORK_COLOR #E5FFCC
+!define HOST_COLOR #F0F0F0
+!define INTERFACE_COLOR #E6E6FA
+!define ARROW_COLOR #666666
+
+skinparam component {
+  BackgroundColor<<Pod>> POD_COLOR
+  BackgroundColor<<NetworkDefinition>> NAD_COLOR
+  BackgroundColor<<Network>> NETWORK_COLOR
+  BackgroundColor<<Host>> HOST_COLOR
+  BackgroundColor<<Interface>> INTERFACE_COLOR
+  BorderColor #333333
+  FontSize 12
+}
+
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #CCCC00
+}
+
+skinparam arrow {
+  Color ARROW_COLOR
+  Thickness 2
+}
+
+title Kubernetes Pod Network Topology\nmacvlan Network Configuration with MAC Addresses
+
+' Host Node
+rectangle "Kubernetes Node" as Host <<Host>> {
+  ' VLAN Interfaces with MAC addresses
+  rectangle "enp4s0.2000\nVLAN 2000 Interface\nMAC: 00:1A:2B:3C:4D:50" as VLAN2000_IF <<Interface>>
+  rectangle "enp4s0.2001\nVLAN 2001 Interface\nMAC: 00:1A:2B:3C:4D:51" as VLAN2001_IF <<Interface>>
+  
+  ' NetworkAttachmentDefinitions
+  rectangle "macvlan-enp4s0-2000-test\nNetworkAttachmentDefinition" as NAD2000 <<NetworkDefinition>> {
+    note right
+      master: enp4s0.2000
+      subnet: 2.1.0.0/24
+      IP Range: 2.1.0.10-2.1.0.100
+      mode: bridge
+      cniVersion: 0.3.1
+    end note
+  }
+  
+  rectangle "macvlan-enp4s0-2001-test\nNetworkAttachmentDefinition" as NAD2001 <<NetworkDefinition>> {
+    note right
+      master: enp4s0.2001
+      subnet: 2.1.1.0/24
+      IP Range: 2.1.1.10-2.1.1.100
+      mode: bridge
+      cniVersion: 0.3.1
+    end note
+  }
+  
+  ' Pod A with MAC addresses
+  rectangle "host-a-busybox-a\nPod" as PodA <<Pod>> {
+    rectangle "eth0\nDefault Network\nMAC: 02:00:00:00:00:0A" as PodA_eth0 <<Interface>>
+    rectangle "net1\n2.1.0.10/24\nMAC: 02:00:00:00:00:0B" as PodA_net1 <<Interface>>
+    rectangle "net2\n2.1.1.10/24\nMAC: 02:00:00:00:00:0C" as PodA_net2 <<Interface>>
+  }
+  
+  ' Pod B with MAC addresses
+  rectangle "host-a-busybox-b\nPod" as PodB <<Pod>> {
+    rectangle "eth0\nDefault Network\nMAC: 02:00:00:00:00:0D" as PodB_eth0 <<Interface>>
+    rectangle "net1\n2.1.0.11/24\nMAC: 02:00:00:00:00:0E" as PodB_net1 <<Interface>>
+    rectangle "net2\n2.1.1.11/24\nMAC: 02:00:00:00:00:0F" as PodB_net2 <<Interface>>
+  }
+}
+
+' Network Subnets
+cloud "External Network\n(Default Kubernetes Network)" as ExternalNetwork
+
+cloud "VLAN 2000 Network\n2.1.0.0/24\nVLAN ID: 2000" as VLAN2000_Network
+cloud "VLAN 2001 Network\n2.1.1.0/24\nVLAN ID: 2001" as VLAN2001_Network
+
+' Connection Relationships
+' NAD to VLAN Interfaces
+NAD2000 -[#blue,dashed]-> VLAN2000_IF : uses
+NAD2001 -[#blue,dashed]-> VLAN2001_IF : uses
+
+' VLAN Interfaces to Networks
+VLAN2000_IF -[#green,bold]-> VLAN2000_Network : connects
+VLAN2001_IF -[#green,bold]-> VLAN2001_Network : connects
+
+' Pods to NADs
+PodA_net1 -[#red,bold]-> NAD2000 : attaches
+PodA_net2 -[#red,bold]-> NAD2001 : attaches
+PodB_net1 -[#red,bold]-> NAD2000 : attaches
+PodB_net2 -[#red,bold]-> NAD2001 : attaches
+
+' Pod Default Networks
+PodA_eth0 -[#888888]-> ExternalNetwork
+PodB_eth0 -[#888888]-> ExternalNetwork
+
+' Inter-Pod Connections
+PodA_net1 -[#orange,dotted]--> PodB_net1 : same VLAN 2000\n2.1.0.0/24
+PodA_net2 -[#orange,dotted]--> PodB_net2 : same VLAN 2001\n2.1.1.0/24
+
+' MAC Address Table
+note top of VLAN2000_IF
+<b>VLAN Interface MAC Addresses:</b>
+enp4s0.2000: 00:1A:2B:3C:4D:50
+enp4s0.2001: 00:1A:2B:3C:4D:51
+end note
+
+note right of PodA
+<b>Pod A Interface MAC Addresses:</b>
+eth0: 02:00:00:00:00:0A
+net1: 02:00:00:00:00:0B
+net2: 02:00:00:00:00:0C
+end note
+
+note right of PodB
+<b>Pod B Interface MAC Addresses:</b>
+eth0: 02:00:00:00:00:0D
+net1: 02:00:00:00:00:0E
+net2: 02:00:00:00:00:0F
+end note
+
+' Legend
+legend right
+  <b>Network Legend:</b>
+  | Color | Component Type |
+  | <#CCE5FF> | Pod Container |
+  | <#E6E6FA> | Network Interface |
+  | <#FFE5CC> | NetworkAttachmentDefinition |
+  | <#E5FFCC> | Network Interface |
+  | <#F0F0F0> | Host/Node |
+  |===|
+  <b>Connection Types:</b>
+  | Color/Style | Description |
+  | blue/dashed | NAD uses VLAN interface |
+  | green/bold | Interface connects to network |
+  | red/bold | Pod attaches to NAD |
+  | gray | Default network connection |
+  | orange/dotted | Inter-Pod communication |
+  |===|
+  <b>MAC Address Format:</b>
+  | Pattern | Description |
+  | 00:1A:2B:3C:4D:XX | Host VLAN interfaces |
+  | 02:00:00:00:00:XX | Pod network interfaces |
+endlegend
+
+@enduml

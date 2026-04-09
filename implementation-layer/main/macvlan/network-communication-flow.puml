@@ -1,5 +1,5 @@
 @startuml
-title Kubernetes Pod Communication via VLAN Interfaces
+title Kubernetes Pod Communication with MAC Addresses
 
 skinparam sequence {
   ArrowColor #333333
@@ -11,51 +11,51 @@ skinparam sequence {
   ParticipantFontSize 12
 }
 
-' Define participants with network interfaces
+' Define participants with network interfaces and MAC addresses
 participant "Pod A" as PodA
-participant "Pod A net1\n2.1.0.10/24" as PodA_net1
-participant "Pod A net2\n2.1.1.10/24" as PodA_net2
-participant "VLAN 2000 Bridge" as VLAN2000
-participant "VLAN 2001 Bridge" as VLAN2001
-participant "Pod B net1\n2.1.0.11/24" as PodB_net1
-participant "Pod B net2\n2.1.1.11/24" as PodB_net2
+participant "Pod A net1\n2.1.0.10/24\nMAC: 02:00:00:00:00:0B" as PodA_net1
+participant "Pod A net2\n2.1.1.10/24\nMAC: 02:00:00:00:00:0C" as PodA_net2
+participant "VLAN 2000 Bridge\nMAC: 00:1A:2B:3C:4D:50" as VLAN2000
+participant "VLAN 2001 Bridge\nMAC: 00:1A:2B:3C:4D:51" as VLAN2001
+participant "Pod B net1\n2.1.0.11/24\nMAC: 02:00:00:00:00:0E" as PodB_net1
+participant "Pod B net2\n2.1.1.11/24\nMAC: 02:00:00:00:00:0F" as PodB_net2
 participant "Pod B" as PodB
 
 ' Communication via VLAN 2000 (net1 interfaces)
-note over PodA, VLAN2000: <b>VLAN 2000 Communication via net1</b>\nSubnet: 2.1.0.0/24
-PodA -> PodA_net1 : 1. Send packet to 2.1.0.11
+note over PodA, VLAN2000: <b>VLAN 2000 Communication</b>\nSubnet: 2.1.0.0/24
+PodA -> PodA_net1 : 1. Send to 2.1.0.11\nSrc MAC: 02:00:00:00:00:0B
 PodA_net1 -> VLAN2000 : 2. Forward via net1
-VLAN2000 -> PodB_net1 : 3. Deliver to Pod B net1
+VLAN2000 -> PodB_net1 : 3. Deliver to Pod B net1\nDst MAC: 02:00:00:00:00:0E
 PodB_net1 -> PodB : 4. Receive packet
 
-PodB -> PodB_net1 : 5. Send reply to 2.1.0.10
+PodB -> PodB_net1 : 5. Reply to 2.1.0.10\nSrc MAC: 02:00:00:00:00:0E
 PodB_net1 -> VLAN2000 : 6. Forward via net1
-VLAN2000 -> PodA_net1 : 7. Deliver to Pod A net1
+VLAN2000 -> PodA_net1 : 7. Deliver to Pod A net1\nDst MAC: 02:00:00:00:00:0B
 PodA_net1 -> PodA : 8. Receive reply
-note over PodA, PodB: <b>VLAN 2000 communication complete</b>
+note over PodA, PodB: <b>VLAN 2000 complete</b>
 
 ' Communication via VLAN 2001 (net2 interfaces)
-note over PodA, VLAN2001: <b>VLAN 2001 Communication via net2</b>\nSubnet: 2.1.1.0/24
-PodA -> PodA_net2 : 9. Send packet to 2.1.1.11
+note over PodA, VLAN2001: <b>VLAN 2001 Communication</b>\nSubnet: 2.1.1.0/24
+PodA -> PodA_net2 : 9. Send to 2.1.1.11\nSrc MAC: 02:00:00:00:00:0C
 PodA_net2 -> VLAN2001 : 10. Forward via net2
-VLAN2001 -> PodB_net2 : 11. Deliver to Pod B net2
+VLAN2001 -> PodB_net2 : 11. Deliver to Pod B net2\nDst MAC: 02:00:00:00:00:0F
 PodB_net2 -> PodB : 12. Receive packet
 
-PodB -> PodB_net2 : 13. Send reply to 2.1.1.10
+PodB -> PodB_net2 : 13. Reply to 2.1.1.10\nSrc MAC: 02:00:00:00:00:0F
 PodB_net2 -> VLAN2001 : 14. Forward via net2
-VLAN2001 -> PodA_net2 : 15. Deliver to Pod A net2
+VLAN2001 -> PodA_net2 : 15. Deliver to Pod A net2\nDst MAC: 02:00:00:00:00:0C
 PodA_net2 -> PodA : 16. Receive reply
-note over PodA, PodB: <b>VLAN 2001 communication complete</b>
+note over PodA, PodB: <b>VLAN 2001 complete</b>
 
 ' Summary
 note over PodA, PodB
 <b>Summary:</b>
-- Pod A uses net1 (2.1.0.10) for VLAN 2000
-- Pod A uses net2 (2.1.1.10) for VLAN 2001
-- Pod B uses net1 (2.1.0.11) for VLAN 2000
-- Pod B uses net2 (2.1.1.11) for VLAN 2001
+- Pod A net1: 2.1.0.10/24, MAC: 02:00:00:00:00:0B
+- Pod A net2: 2.1.1.10/24, MAC: 02:00:00:00:00:0C
+- Pod B net1: 2.1.0.11/24, MAC: 02:00:00:00:00:0E
+- Pod B net2: 2.1.1.11/24, MAC: 02:00:00:00:00:0F
+- VLAN Bridges: 00:1A:2B:3C:4D:50/51
 - Each VLAN is isolated at Layer 2
-- No cross-VLAN routing between interfaces
 end note
 
 @enduml

@@ -1,0 +1,95 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam rectangle {
+  BackgroundColor #F5F5F5
+  BorderColor #757575
+  FontColor #212121
+  Shadowing false
+  RoundCorner 5
+}
+skinparam arrow {
+  Color #1565C0
+  FontColor #0D47A1
+}
+skinparam note {
+  BackgroundColor #FFF8E1
+  BorderColor #FF8F00
+  FontColor #5D4037
+}
+
+title Pod Network Communication Flow (eth0 as default, net1 as ptp)
+
+start
+
+:Pod Application\nsends network request
+e.g. ping 8.8.8.8
+or curl http://example.com;
+
+:Pod Network Stack
+processes request
+determines source IP;
+
+:Check Pod Routing Table
+for destination IP;
+
+if (Destination is 2.1.3.0/24?) then (yes)
+  :Use net1 interface
+  (ptp network, same subnet);
+  :Source: 2.1.3.10
+  Gateway: 2.1.3.1;
+  note right
+    <b>net1 interface</b>
+    Local ptp network traffic
+  end note
+else (other destinations)
+  if (Destination is cluster network?) then (yes)
+    :Use eth0 interface
+    (default CNI network);
+    :Source: eth0 IP
+    Gateway: via eth0;
+    note right
+      <b>eth0 interface</b>
+      Cluster network traffic
+    end note
+  else (external network)
+    :Use eth0 (default route)
+    via default gateway;
+    note right
+      <b>eth0 default route</b>
+      All external traffic
+    end note
+  endif
+endif
+
+if (Using net1 interface?) then (yes)
+  :Prepare network packet
+  Source: 2.1.3.10 via net1;
+  :Send via veth pair
+  to host veth endpoint (2.1.3.1);
+  :Host processes packet
+  in kernel network stack;
+  if (Destination is 2.1.3.0/24?) then (yes)
+    :Deliver within ptp network
+    via host routing;
+  else (other destinations)
+    :Forward to external network
+    via physical interface;
+  endif
+else (using eth0)
+  :Send via eth0
+  to cluster/external network;
+endif
+
+:Destination receives packet
+processes request;
+
+:Send response
+reverse the same path
+back to pod;
+
+:Pod receives response
+delivers to application;
+
+stop
+
+@enduml
